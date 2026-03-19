@@ -4,7 +4,6 @@ import { useMemo, useState, useTransition } from "react"
 import Papa from "papaparse"
 import * as XLSX from "xlsx"
 import { PDFDocument, StandardFonts } from "pdf-lib"
-
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -147,7 +146,7 @@ export function ProspectsExportDialog({ prospects }: ProspectsExportDialogProps)
 
         <div className="grid gap-3">
           <div className="w-full sm:w-64">
-            <Select value={format} onValueChange={(value) => setFormat(value as ExportFormat)}>
+            <Select value={format} onValueChange={(value: ExportFormat) => setFormat(value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Formato" />
               </SelectTrigger>
