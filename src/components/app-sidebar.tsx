@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { MessageSquareText, Settings, UserPlus, Users } from "lucide-react"
+import { BrainCircuit, MessageSquareText, Settings, UserPlus, Users } from "lucide-react"
 
 import {
   Sidebar,
@@ -27,6 +27,7 @@ type NavigationItem = {
 const navigationItems: NavigationItem[] = [
   { label: "Clientes Activos", href: "/clientes-activos", icon: Users },
   { label: "Posibles Clientes", href: "/posibles-clientes", icon: UserPlus },
+  { label: "Buscador IA", href: "/buscador-ia", icon: BrainCircuit },
   { label: "Plantillas", href: "/message-templates", icon: MessageSquareText },
   { label: "Configuración", href: "/configuracion", icon: Settings },
 ]

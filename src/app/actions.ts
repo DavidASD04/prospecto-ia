@@ -779,3 +779,129 @@ export async function deleteMultipleDealers(ids: string[]): Promise<ActionResult
     return { success: false, error: "Error eliminando prospectos" }
   }
 }
+
+// ───────────────────────────────────────────
+// AI Search
+// ───────────────────────────────────────────
+
+export type AIProspectResult = {
+  name: string
+  businessType: string
+  phone: string
+  instagram: string
+  location: string
+  description: string
+}
+
+type AISearchResult = ActionResult & {
+  prospects?: AIProspectResult[]
+}
+
+export async function searchProspectsWithAI(input: {
+  businessType: string
+  location: string
+  keywords?: string
+}): Promise<AISearchResult> {
+  const session = await getSession()
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  const { businessType, location, keywords } = input
+  if (!businessType.trim() || !location.trim()) {
+    return { success: false, error: "Tipo de negocio y ubicación son requeridos" }
+  }
+
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) {
+    return { success: false, error: "API key de OpenAI no configurada" }
+  }
+
+  try {
+    const { default: OpenAI } = await import("openai")
+    const openai = new OpenAI({ apiKey })
+
+    const prompt = `Eres un asistente experto en prospección comercial. Genera una lista de 10 posibles negocios/empresas que podrían ser prospectos reales.
+
+Criterios de búsqueda:
+- Tipo de negocio: ${businessType}
+- Ubicación/zona: ${location}
+${keywords ? `- Palabras clave adicionales: ${keywords}` : ""}
+
+Responde ÚNICAMENTE con un JSON array válido (sin markdown, sin texto adicional). Cada objeto debe tener estas propiedades exactas:
+- "name": nombre del negocio (inventado pero realista para la zona)
+- "businessType": tipo de negocio
+- "phone": número de teléfono en formato internacional (ej: 18095551234) o vacío si no aplica
+- "instagram": handle de Instagram sin @ o vacío
+- "location": dirección o zona
+- "description": breve descripción del negocio (1-2 oraciones)
+
+Genera nombres realistas para la zona indicada. Los números de teléfono deben ser ficticios pero con formato válido para la zona.`
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.8,
+      max_tokens: 2000,
+    })
+
+    const content = completion.choices[0]?.message?.content?.trim()
+    if (!content) {
+      return { success: false, error: "No se recibió respuesta de la IA" }
+    }
+
+    const prospects: AIProspectResult[] = JSON.parse(content)
+
+    if (!Array.isArray(prospects)) {
+      return { success: false, error: "Formato de respuesta inválido" }
+    }
+
+    return { success: true, prospects }
+  } catch (error) {
+    console.error("AI search failed:", error)
+    if (error instanceof SyntaxError) {
+      return { success: false, error: "Error procesando respuesta de la IA" }
+    }
+    return { success: false, error: "Error al buscar prospectos con IA" }
+  }
+}
+
+export async function importAIProspect(prospect: AIProspectResult): Promise<ActionResult> {
+  const session = await getSession()
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  try {
+    const contactMethod =
+      prospect.phone && prospect.instagram
+        ? "both"
+        : prospect.phone
+          ? "whatsapp"
+          : prospect.instagram
+            ? "instagram"
+            : "none"
+
+    await prisma.dealer.create({
+      data: {
+        name: prospect.name,
+        businessType: prospect.businessType,
+        phone: prospect.phone ? sanitizePhone(prospect.phone) : null,
+        instagram: prospect.instagram || null,
+        contactMethod,
+        location: prospect.location,
+        companyType: prospect.businessType,
+        contacted: false,
+        isActive: true,
+        createdById: session.user.id,
+      },
+    })
+
+    revalidatePath("/(dashboard)/posibles-clientes", "page")
+    revalidatePath("/(dashboard)/buscador-ia", "page")
+    return { success: true }
+  } catch (error) {
+    console.error("Failed to import AI prospect:", error)
+    return { success: false, error: "Error importando prospecto" }
+  }
+}
