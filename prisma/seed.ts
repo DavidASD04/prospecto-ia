@@ -14,21 +14,28 @@ const adapter = new PrismaPg({ connectionString })
 const prisma = new PrismaClient({ adapter })
 
 async function main() {
-  const hashedPassword = await hash("1234", 12)
-  const seededUserIds = ["ds", "jxs"]
+  const hashedDefault = await hash("1234", 12)
+  const hashedJs = await hash("@William2025", 12)
+  const seededUserIds = ["ds", "jxs", "js"]
 
   const users = [
     {
       id: "ds",
       name: "ds",
       email: "ds@gmail.com",
-      password: hashedPassword,
+      password: hashedDefault,
     },
     {
       id: "jxs",
       name: "jxs",
       email: "jxs@gmail.com",
-      password: hashedPassword,
+      password: hashedDefault,
+    },
+    {
+      id: "js",
+      name: "js",
+      email: "js@gmail.com",
+      password: hashedJs,
     },
   ]
 
@@ -53,7 +60,7 @@ async function main() {
     },
   })
 
-  console.log("Seed completed: users ds and jxs are ready.")
+  console.log("Seed completed: users ds, jxs and js are ready.")
 }
 
 main()

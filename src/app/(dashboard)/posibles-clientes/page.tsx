@@ -19,16 +19,15 @@ function normalizeContactMethod(value: string): ContactMethod {
 }
 
 export default async function PosiblesClientesPage() {
-  await requireAuthUser()
+  const user = await requireAuthUser()
 
   const [prospects, templates] = await Promise.all([
     prisma.dealer.findMany({
+      where: { createdById: user.id },
       orderBy: { createdAt: "desc" },
     }),
     prisma.messageTemplate.findMany({
-      where: {
-        
-      },
+      where: { createdById: user.id },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,

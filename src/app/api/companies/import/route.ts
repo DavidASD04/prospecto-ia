@@ -106,6 +106,7 @@ export async function POST(request: Request) {
 
   const existing = await prisma.dealer.findMany({
     where: {
+      createdById: session.user.id,
       OR: [
         {
           phone: {

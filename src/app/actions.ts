@@ -120,6 +120,7 @@ export async function createDealer(formData: FormData) {
 
   const duplicate = await prisma.dealer.findFirst({
     where: {
+      createdById: session.user.id,
       OR: [
         { phone },
         ...(instagram ? [{ instagram }] : []),
@@ -185,6 +186,7 @@ export async function updateDealerContacted(id: string, contacted: boolean) {
   const result = await prisma.dealer.updateMany({
     where: {
       id,
+      createdById: session.user.id,
       isActive: true,
     },
     data: { contacted },
@@ -255,6 +257,7 @@ export async function updateDealer(input: UpdateDealerInput) {
 
   const duplicate = await prisma.dealer.findFirst({
     where: {
+      createdById: session.user.id,
       OR: [
         { phone },
         ...(instagram ? [{ instagram }] : []),
@@ -276,6 +279,7 @@ export async function updateDealer(input: UpdateDealerInput) {
   const result = await prisma.dealer.updateMany({
     where: {
       id,
+      createdById: session.user.id,
       isActive: true,
     },
     data: {
@@ -313,6 +317,7 @@ export async function deleteDealer(id: string) {
   const result = await prisma.dealer.updateMany({
     where: {
       id,
+      createdById: session.user.id,
       isActive: true,
     },
     data: {
@@ -422,6 +427,7 @@ export async function importProspectsBatch(rows: ProspectImportRow[]) {
 
     const existing = await tx.dealer.findMany({
       where: {
+        createdById: session.user.id,
         OR: [
           {
             phone: {
@@ -655,7 +661,7 @@ export async function updateMessageTemplate(input: MessageTemplateInput) {
     const result = await prisma.messageTemplate.updateMany({
       where: {
         id,
-        
+        createdById: session.user.id,
       },
       data: {
         name,
@@ -706,7 +712,7 @@ export async function deleteMessageTemplate(id: string) {
   const result = await prisma.messageTemplate.deleteMany({
     where: {
       id,
-      
+      createdById: session.user.id,
     },
   })
 
@@ -736,6 +742,7 @@ export async function updateDealerStatusForWhatsApp(input: WhatsAppStatusInput) 
   const result = await prisma.dealer.updateMany({
     where: {
       id: input.dealerId,
+      createdById: session.user.id,
       isActive: true,
     },
     data: {
@@ -764,6 +771,7 @@ export async function deleteMultipleDealers(ids: string[]): Promise<ActionResult
     await prisma.dealer.updateMany({
       where: {
         id: { in: ids },
+        createdById: session.user.id,
         isActive: true,
       },
       data: {
