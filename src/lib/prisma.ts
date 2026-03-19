@@ -1,29 +1,31 @@
 import { PrismaClient } from "@prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 
-const connectionString = process.env.DATABASE_URL
-
-if (!connectionString) {
-  throw new Error("DATABASE_URL is not defined")
-}
-
-const adapter = new PrismaPg({
-  connectionString,
-  max: 5,
-  idleTimeoutMillis: 30_000,
-  connectionTimeoutMillis: 10_000,
-})
-
 declare global {
   var prisma: PrismaClient | undefined
 }
 
-export const prisma =
-  global.prisma ??
-  new PrismaClient({
-    adapter,
+function createPrismaClient(): PrismaClient {
+  const connectionString = process.env.DATABASE_URL
+  if (!connectionString) {
+    throw new Error("DATABASE_URL is not defined")
+  }
+
+  const adapter = new PrismaPg({
+    connectionString,
+    max: 5,
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 10_000,
   })
 
-if (process.env.NODE_ENV !== "production") {
-  global.prisma = prisma
+  return new PrismaClient({ adapter })
 }
+
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, prop) {
+    if (!globalThis.prisma) {
+      globalThis.prisma = createPrismaClient()
+    }
+    return Reflect.get(globalThis.prisma, prop)
+  },
+})
