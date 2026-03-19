@@ -1,0 +1,55 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  dealers   Dealer[]
+  messageTemplates MessageTemplate[]
+}
+
+model Dealer {
+  id           String   @id @default(cuid())
+  name         String
+  businessType String
+  phone        String?
+  instagram    String?
+  contactMethod String  @default("none") @map("contact_method")
+  location     String
+  companyType  String
+  contacted    Boolean  @default(false)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdById  String
+  createdBy    User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@unique([phone])
+  @@unique([instagram])
+}
+
+model MessageTemplate {
+  id              String   @id @default(cuid())
+  name            String
+  messageTemplate String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdById     String
+  createdBy       User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@unique([name])
+}
