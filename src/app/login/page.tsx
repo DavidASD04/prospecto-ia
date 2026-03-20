@@ -4,7 +4,12 @@ import { LoginForm } from "@/components/login-form"
 import { getSession } from "@/lib/auth"
 
 export default async function LoginPage() {
-  const session = await getSession()
+  let session = null
+  try {
+    session = await getSession()
+  } catch {
+    // JWT corrupto o secret cambiado — ignorar y mostrar login
+  }
 
   if (session?.user?.id) {
     redirect("/")
