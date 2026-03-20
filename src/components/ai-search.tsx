@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Table,
   TableBody,
@@ -21,25 +22,25 @@ import {
 import { Badge } from "@/components/ui/badge"
 
 export function AISearch() {
-  const [businessType, setBusinessType] = useState("")
+  const [serviceOffered, setServiceOffered] = useState("")
+  const [targetBusinesses, setTargetBusinesses] = useState("")
   const [location, setLocation] = useState("")
-  const [keywords, setKeywords] = useState("")
   const [results, setResults] = useState<AIProspectResult[]>([])
   const [importedIndexes, setImportedIndexes] = useState<Set<number>>(new Set())
   const [isSearching, startSearch] = useTransition()
   const [importingIndex, setImportingIndex] = useState<number | null>(null)
 
   function handleSearch() {
-    if (!businessType.trim() || !location.trim()) {
-      toast.error("Tipo de negocio y ubicación son requeridos")
+    if (!serviceOffered.trim() || !targetBusinesses.trim() || !location.trim()) {
+      toast.error("Todos los campos son requeridos")
       return
     }
 
     startSearch(async () => {
       const result = await searchProspectsWithAI({
-        businessType: businessType.trim(),
+        serviceOffered: serviceOffered.trim(),
+        targetBusinesses: targetBusinesses.trim(),
         location: location.trim(),
-        keywords: keywords.trim() || undefined,
       })
 
       if (result.success && result.prospects) {
@@ -82,20 +83,32 @@ export function AISearch() {
       {/* Search Form */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Criterios de Búsqueda</CardTitle>
+          <CardTitle className="text-base">Buscar Prospectos con IA</CardTitle>
           <CardDescription>
-            Define el tipo de negocio y la zona para buscar prospectos
+            Describe tu servicio y el tipo de negocios que buscas. La IA generará prospectos ideales para ti.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="serviceOffered">¿Qué vendes o qué servicio ofreces? *</Label>
+              <Textarea
+                id="serviceOffered"
+                placeholder="Ej: Sistema de facturación electrónica, Servicio de diseño web, Software de gestión de inventario, Marketing digital..."
+                value={serviceOffered}
+                onChange={(e) => setServiceOffered(e.target.value)}
+                disabled={isSearching}
+                rows={2}
+                className="resize-none"
+              />
+            </div>
             <div className="space-y-2">
-              <Label htmlFor="businessType">Tipo de Negocio *</Label>
+              <Label htmlFor="targetBusinesses">¿A qué tipo de negocios quieres venderle? *</Label>
               <Input
-                id="businessType"
-                placeholder="Ej: Restaurante, Taller, Clínica..."
-                value={businessType}
-                onChange={(e) => setBusinessType(e.target.value)}
+                id="targetBusinesses"
+                placeholder="Ej: Restaurantes, Clínicas dentales, Talleres mecánicos..."
+                value={targetBusinesses}
+                onChange={(e) => setTargetBusinesses(e.target.value)}
                 disabled={isSearching}
               />
             </div>
@@ -103,19 +116,9 @@ export function AISearch() {
               <Label htmlFor="location">Ubicación / Zona *</Label>
               <Input
                 id="location"
-                placeholder="Ej: Santo Domingo, Piantini..."
+                placeholder="Ej: Santo Domingo, Piantini, Santiago..."
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                disabled={isSearching}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="keywords">Palabras Clave (opcional)</Label>
-              <Input
-                id="keywords"
-                placeholder="Ej: premium, delivery, nuevo..."
-                value={keywords}
-                onChange={(e) => setKeywords(e.target.value)}
                 disabled={isSearching}
               />
             </div>
@@ -130,7 +133,7 @@ export function AISearch() {
             ) : (
               <Search className="size-4" />
             )}
-            {isSearching ? "Buscando..." : "Buscar Prospectos"}
+            {isSearching ? "Buscando prospectos..." : "Buscar Prospectos"}
           </Button>
         </CardContent>
       </Card>

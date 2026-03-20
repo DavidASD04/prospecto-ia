@@ -806,51 +806,53 @@ type AISearchResult = ActionResult & {
 }
 
 export async function searchProspectsWithAI(input: {
-  businessType: string
+  serviceOffered: string
+  targetBusinesses: string
   location: string
-  keywords?: string
 }): Promise<AISearchResult> {
   const session = await getSession()
   if (!session?.user) {
     return { success: false, error: "Unauthorized" }
   }
 
-  const { businessType, location, keywords } = input
-  if (!businessType.trim() || !location.trim()) {
-    return { success: false, error: "Tipo de negocio y ubicación son requeridos" }
+  const { serviceOffered, targetBusinesses, location } = input
+  if (!serviceOffered.trim() || !targetBusinesses.trim() || !location.trim()) {
+    return { success: false, error: "Todos los campos son requeridos" }
   }
 
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
-    return { success: false, error: "API key de OpenAI no configurada" }
+    return { success: false, error: "API key de OpenAI no configurada. Verifica la variable OPENAI_API_KEY." }
   }
 
   try {
     const { default: OpenAI } = await import("openai")
     const openai = new OpenAI({ apiKey })
 
-    const prompt = `Eres un asistente experto en prospección comercial. Genera una lista de 10 posibles negocios/empresas que podrían ser prospectos reales.
+    const prompt = `Eres un asistente experto en prospección comercial y ventas B2B.
 
-Criterios de búsqueda:
-- Tipo de negocio: ${businessType}
-- Ubicación/zona: ${location}
-${keywords ? `- Palabras clave adicionales: ${keywords}` : ""}
+Contexto del vendedor:
+- Servicio/producto que ofrece: ${serviceOffered}
+- Tipo de negocios objetivo: ${targetBusinesses}
+- Zona geográfica: ${location}
 
-Responde ÚNICAMENTE con un JSON array válido (sin markdown, sin texto adicional). Cada objeto debe tener estas propiedades exactas:
-- "name": nombre del negocio (inventado pero realista para la zona)
-- "businessType": tipo de negocio
-- "phone": número de teléfono en formato internacional (ej: 18095551234) o vacío si no aplica
-- "instagram": handle de Instagram sin @ o vacío
-- "location": dirección o zona
-- "description": breve descripción del negocio (1-2 oraciones)
+Con base en este contexto, genera una lista de 10 negocios que serían prospectos ideales para este vendedor. Estos negocios deben ser del tipo indicado, estar en la zona indicada, y tener una necesidad real o probable del servicio/producto ofrecido.
 
-Genera nombres realistas para la zona indicada. Los números de teléfono deben ser ficticios pero con formato válido para la zona.`
+Para cada prospecto, genera datos realistas y coherentes con la zona. Los nombres deben sonar auténticos para el país/zona.
+
+Responde ÚNICAMENTE con un JSON array válido (sin markdown, sin backticks, sin texto adicional). Cada objeto debe tener exactamente estas propiedades:
+- "name": nombre comercial del negocio (realista para la zona)
+- "businessType": tipo/categoría del negocio
+- "phone": número de teléfono en formato internacional sin + (ej: 18095551234), o cadena vacía
+- "instagram": handle de Instagram sin @, o cadena vacía
+- "location": dirección o sector específico dentro de la zona
+- "description": por qué este negocio necesitaría el servicio "${serviceOffered}" (1-2 oraciones)`
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.8,
-      max_tokens: 2000,
+      max_completion_tokens: 2500,
     })
 
     const content = completion.choices[0]?.message?.content?.trim()
@@ -858,19 +860,34 @@ Genera nombres realistas para la zona indicada. Los números de teléfono deben 
       return { success: false, error: "No se recibió respuesta de la IA" }
     }
 
-    const prospects: AIProspectResult[] = JSON.parse(content)
+    const cleaned = content.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim()
+    const prospects: AIProspectResult[] = JSON.parse(cleaned)
 
     if (!Array.isArray(prospects)) {
       return { success: false, error: "Formato de respuesta inválido" }
     }
 
     return { success: true, prospects }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("AI search failed:", error)
     if (error instanceof SyntaxError) {
-      return { success: false, error: "Error procesando respuesta de la IA" }
+      return { success: false, error: "Error procesando la respuesta de la IA. Intenta de nuevo." }
     }
-    return { success: false, error: "Error al buscar prospectos con IA" }
+    const apiError = error as { status?: number; error?: { message?: string; code?: string } }
+    if (apiError.status === 429) {
+      const code = apiError.error?.code
+      if (code === "insufficient_quota") {
+        return { success: false, error: "Tu cuenta de OpenAI no tiene saldo disponible. Recarga créditos en platform.openai.com" }
+      }
+      return { success: false, error: "Demasiadas solicitudes. Espera unos segundos e intenta de nuevo." }
+    }
+    if (apiError.status === 401) {
+      return { success: false, error: "API key de OpenAI inválida o expirada. Verifica tu clave." }
+    }
+    if (apiError.error?.message) {
+      return { success: false, error: `Error de OpenAI: ${apiError.error.message}` }
+    }
+    return { success: false, error: "Error inesperado al buscar prospectos. Intenta de nuevo." }
   }
 }
 
