@@ -13,6 +13,13 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
   },
+  logger: {
+    error(code, metadata) {
+      // Suppress noisy JWT decryption errors (stale/corrupted cookies)
+      if (code === "JWT_SESSION_ERROR") return
+      console.error(`[next-auth][error][${code}]`, metadata)
+    },
+  },
   pages: {
     signIn: "/login",
   },
